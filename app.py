@@ -328,7 +328,7 @@ def delete_account():
 
 if __name__ == '__main__':
     import os
-    port = int(os.environ.get("PORT", 5001))  # Defaults to 5001 if not set
-    app.run(debug=True, port=port)
+    port = int(os.environ.get('PORT', 10000))  # 10000 is Render's default
+    app.run(debug=True, host='0.0.0.0', port=port)
 
 
