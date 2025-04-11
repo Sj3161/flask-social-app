@@ -1,6 +1,22 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+        // Fetch current location and reload the page with lat/lon in query
+        window.onload = function () {
+            if (!window.location.search.includes("lat=")) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set("lat", lat);
+                    currentUrl.searchParams.set("lon", lon);
+                    window.location.href = currentUrl.toString(); // reload with location
+                });
+            }
+        };
+    </script>
+
     <meta charset="UTF-8">
     <title>Inner Home</title>
     <style>
@@ -109,21 +125,11 @@
     </form>
 
     <!-- ✅ Display Posts -->
-    <div class="posts">
+    <div class="posts" id="posts-container">
         <h2>📬 Recent Posts</h2>
-        {% for post in posts %}
-        <div class="post">
-            <strong>@{{ post.username }}</strong><br>
-            {{ post.content }}
-            <small>Visibility: {{ post.visibility }}</small>
-            {% if post.visibility == 'private' %}
-            <a href="{{ url_for('chat') }}">💬 Private Group Chat</a>
-            {% endif %}
-        </div>
-        {% else %}
-        <p>No posts yet.</p>
-        {% endfor %}
+        <p>Loading posts...</p>
     </div>
+
 
     <hr><br>
     <h2>👥 Your Friends</h2>
@@ -218,6 +224,28 @@
     </form>
 
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+      function fetchPosts(lat, lon) {
+        fetch(`/get_posts?lat=${lat}&lon=${lon}`)
+          .then(res => res.text())
+          .then(html => {
+            document.getElementById("posts-container").innerHTML = html;
+          })
+          .catch(err => console.error("Failed to load posts:", err));
+      }
+
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(position => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          fetchPosts(lat, lon);
+        }, () => {
+          console.warn("Geolocation denied. Using default posts.");
+        });
+      }
+    });
+</script>
 
 </body>
 </html>

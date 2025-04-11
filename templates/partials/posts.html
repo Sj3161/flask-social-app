@@ -1,0 +1,14 @@
+{% if posts %}
+{% for post in posts %}
+<div class="post">
+    <strong>@{{ post.username }}</strong><br>
+    {{ post.content }}
+    <small>Visibility: {{ post.visibility }}</small>
+    {% if post.visibility == 'private' %}
+    <a href="{{ url_for('chat') }}">💬 Private Group Chat</a>
+    {% endif %}
+</div>
+{% endfor %}
+{% else %}
+<p>No posts yet.</p>
+{% endif %}
