@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Inner Home</title>
+    <style>
+        body {
+          font-family: Arial, sans-serif;
+          background-color: #eef1f5;
+          padding: 40px;
+          text-align: center;
+        }
+        .container {
+          background: white;
+          display: inline-block;
+          padding: 40px;
+          border-radius: 10px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+          width: 80%;
+        }
+        textarea, select, .friend-select {
+          width: 100%;
+          padding: 10px;
+          font-size: 1rem;
+          margin-top: 10px;
+          border-radius: 5px;
+          border: 1px solid #ccc;
+        }
+        button {
+          margin-top: 10px;
+          padding: 10px 20px;
+          background-color: #007bff;
+          border: none;
+          color: white;
+          font-size: 1rem;
+          border-radius: 5px;
+          cursor: pointer;
+        }
+        button:hover {
+          background-color: #0056b3;
+        }
+        .post {
+          background-color: #f8f9fa;
+          padding: 15px;
+          margin-top: 20px;
+          border-left: 5px solid #007bff;
+          border-radius: 5px;
+          text-align: left;
+        }
+        .post small {
+          display: block;
+          margin-top: 5px;
+          font-size: 0.8rem;
+          color: #888;
+        }
+        .nav-links {
+          margin-top: 20px;
+        }
+        .nav-links a {
+          margin: 5px;
+          text-decoration: none;
+          color: white;
+          background-color: #007bff;
+          padding: 10px 20px;
+          border-radius: 5px;
+        }
+        .nav-links a:hover {
+          background-color: #0056b3;
+        }
+
+         a.unfriend-button:hover {
+    background-color: #b52a35;
+  }
+    </style>
+    <script>
+        function toggleFriendList() {
+          const visibility = document.getElementById('visibility').value;
+          const friendDiv = document.getElementById('friend-list');
+          friendDiv.style.display = visibility === 'private' ? 'block' : 'none';
+        }
+    </script>
+</head>
+<body>
+
+<div class="container">
+    <h1>Welcome, {{ username }} 👋</h1>
+
+    <!-- ✅ Post Form -->
+    <form method="POST" action="{{ url_for('post_message') }}">
+        <textarea name="content" placeholder="What's on your mind?" required></textarea><br>
+
+        <label for="visibility">Visibility:</label>
+        <select name="visibility" id="visibility" onchange="toggleFriendList()" required>
+            <option value="public">Public (visible to all nearby users)</option>
+            <option value="private">Private (only selected friends)</option>
+        </select><br>
+
+        <!-- ✅ Friend Selection (only for private) -->
+        <div id="friend-list" style="display: none;">
+            <label>Select friends to share this post with:</label><br>
+            {% for friend in friends %}
+            <div style="text-align: left;">
+                <input type="checkbox" name="friends" value="{{ friend.id }}"> {{ friend.username }}
+            </div>
+            {% endfor %}
+        </div>
+
+        <button type="submit">Post</button>
+    </form>
+
+    <!-- ✅ Display Posts -->
+    <div class="posts">
+        <h2>📬 Recent Posts</h2>
+        {% for post in posts %}
+        <div class="post">
+            <strong>@{{ post.username }}</strong><br>
+            {{ post.content }}
+            <small>Visibility: {{ post.visibility }}</small>
+            {% if post.visibility == 'private' %}
+            <a href="{{ url_for('chat') }}">💬 Private Group Chat</a>
+            {% endif %}
+        </div>
+        {% else %}
+        <p>No posts yet.</p>
+        {% endfor %}
+    </div>
+
+    <hr><br>
+    <h2>👥 Your Friends</h2>
+    {% if confirmed_friends %}
+    <ul style="list-style: none; padding: 0;">
+        {% for friend in confirmed_friends %}
+        <li style="margin-bottom: 10px;">
+            <strong>{{ friend.username }}</strong><br>
+
+            <a href="{{ url_for('unfriend', friend_id=friend.id) }}"
+               class="unfriend-button"
+               style="color: white; background-color: #dc3545; padding: 5px 10px; border-radius: 5px; text-decoration: none;">
+                ❌ Unfriend
+            </a>
+
+            <a href="{{ url_for('private_chat', friend_id=friend.id) }}"
+               class="chat-button"
+               style="color: white; background-color: #17a2b8; padding: 5px 10px; border-radius: 5px; text-decoration: none; margin-left: 10px;">
+                💬 Chat
+            </a>
+        </li>
+
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>You have no confirmed friends yet.</p>
+    {% endif %}
+
+
+    <hr><br>
+    <h2>🤝 Add Friends</h2>
+    {% for friend in friends %}
+    <div style="margin: 10px 0;">
+        <strong>{{ friend.username }}</strong>
+        {% set existing_request = sent_requests | selectattr('receiver_id', 'equalto', friend.id) | list %}
+        {% if existing_request %}
+        <span style="color: gray;">Request Sent</span>
+        {% else %}
+        <a href="{{ url_for('send_request', receiver_id=friend.id) }}">Send Friend Request</a>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+
+    <hr><br>
+    <h2>📥 Incoming Friend Requests</h2>
+    {% if friend_requests %}
+    <div style="margin: 10px 0;">
+        {% for req in friend_requests %}
+        {% set sender = users[req.sender_id] if req.sender_id in users else req.sender_id %}
+        <strong>Request from: @{{ sender.username if sender.username else sender }}</strong><br>
+        <a href="{{ url_for('accept_request', request_id=req.id) }}">✅ Accept</a>
+        <a href="{{ url_for('reject_request', request_id=req.id) }}">❌ Reject</a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p>No new friend requests.</p>
+    {% endif %}
+
+
+    <hr><br>
+    <h2>📤 Sent Friend Requests</h2>
+    {% if sent_requests %}
+    <ul>
+        {% for req in sent_requests %}
+        {% set receiver = sent_users[req.receiver_id] if req.receiver_id in sent_users else req.receiver_id %}
+        <li>
+            Sent to: @{{ receiver.username if receiver.username else receiver }}<br>
+            <a href="{{ url_for('cancel_request', request_id=req.id) }}"
+               style="color: white; background-color: #dc3545; padding: 5px 10px; border-radius: 5px; text-decoration: none;">
+                ❌ Cancel
+            </a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No pending friend requests sent.</p>
+    {% endif %}
+
+
+    <!-- Navigation -->
+    <div class="nav-links">
+        <a href="{{ url_for('logout') }}">Logout</a>
+        <a href="{{ url_for('home') }}">Home</a>
+    </div>
+
+    <!-- 🗑️ Account Deletion -->
+    <form action="{{ url_for('confirm_delete') }}" method="GET">
+        <button type="submit" style="margin-top: 20px; background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px;">
+            🗑️ Delete My Account
+        </button>
+    </form>
+
+</div>
+
+</body>
+</html>

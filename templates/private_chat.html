@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat with {{ friend.username }}</title>
+</head>
+<body>
+<h2>💬 Chat with @{{ friend.username }}</h2>
+
+<div style="border: 1px solid #ccc; padding: 15px;">
+    {% for msg in messages %}
+    <p><strong>{{ 'You' if msg.sender_id == session['user_id'] else friend.username }}:</strong> {{ msg.message }}</p>
+    {% else %}
+    <p>No messages yet.</p>
+    {% endfor %}
+</div>
+
+<form method="POST">
+    <textarea name="message" rows="3" cols="40" placeholder="Type a message..." required></textarea><br>
+    <button type="submit">Send</button>
+</form>
+
+<br>
+<a href="{{ url_for('inner_home') }}">⬅️ Back to Inner Home</a>
+</body>
+</html>

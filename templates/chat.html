@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Private Group Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef1f5;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .chat-container {
+            background-color: white;
+            border-radius: 10px;
+            padding: 30px;
+            width: 60%;
+            margin: 0 auto;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        .chat-box {
+            height: 300px;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+            text-align: left;
+        }
+
+        .chat-input {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input input[type="text"] {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .chat-input button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            border: none;
+            color: white;
+            font-size: 1rem;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .chat-input button:hover {
+            background-color: #0056b3;
+        }
+
+        a {
+            display: inline-block;
+            margin-top: 20px;
+            color: white;
+            background-color: #007bff;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+
+        a:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+<div class="chat-container">
+    <h1>Private Group Chat 💬</h1>
+
+    <div class="chat-box" id="chat-box">
+        <!-- Messages will appear here -->
+        <p><strong>@monica:</strong> Hey everyone 👋</p>
+        <p><strong>@you:</strong> Hello, excited to be here!</p>
+    </div>
+
+    <div class="chat-input">
+        <input type="text" placeholder="Type your message..." />
+        <button type="button">Send</button>
+    </div>
+
+    <a href="{{ url_for('inner_home') }}">⬅ Back to Home</a>
+</div>
+</body>
+</html>
