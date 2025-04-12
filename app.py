@@ -19,8 +19,6 @@ class User(db.Model):
     latitude = db.Column(db.Float, default=12.9716)
     longitude = db.Column(db.Float, default=77.5946)
 
-
-
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
@@ -52,12 +50,11 @@ class PrivateMessage(db.Model):
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.now())
 
-
 with app.app_context():
     db.create_all()
 
 def within_10km(lat1, lon1, lat2, lon2):
-    R = 6371  # Earth radius in km
+    R = 6371
     dlat = radians(lat2 - lat1)
     dlon = radians(lon2 - lon1)
     a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
@@ -74,10 +71,10 @@ def login():
         email = request.form.get('email')
         password = request.form.get('password')
         user = User.query.filter_by(email=email).first()
-        if not user :
+        if not user:
             flash("This user no longer exists.", "danger")
             return redirect(url_for("login"))
-        if user and check_password_hash(user.password, password):
+        if check_password_hash(user.password, password):
             session['user_id'] = user.id
             session.modified = True
             flash('Login successful!', 'success')
@@ -110,20 +107,20 @@ def inner_home():
         return redirect(url_for('login'))
 
     user = db.session.get(User, session['user_id'])
-
-    # Get live coordinates from query parameters (fallback to user's DB location)
     lat = float(request.args.get('lat', user.latitude))
     lon = float(request.args.get('lon', user.longitude))
-
-    # Optionally update user location in DB
     user.latitude = lat
     user.longitude = lon
     db.session.commit()
+
+    blocked_usernames = session.get('blocked_users', [])
 
     all_posts = Post.query.all()
     visible_posts = []
     for post in all_posts:
         post_user = db.session.get(User, post.user_id)
+        if post.username in blocked_usernames:
+            continue
         if post.visibility == 'public':
             if within_10km(lat, lon, post_user.latitude, post_user.longitude):
                 visible_posts.append(post)
@@ -147,7 +144,6 @@ def inner_home():
     )
 
     all_users = User.query.filter(User.id != user.id, ~User.id.in_(excluded_ids)).all()
-
     sent_receiver_map = {u.id: u for u in User.query.filter(User.id.in_([r.receiver_id for r in sent_requests])).all()}
 
     return render_template(
@@ -159,18 +155,47 @@ def inner_home():
         sent_requests=sent_requests,
         confirmed_friends=confirmed_friends,
         users={u.id: u for u in User.query.all()},
-        sent_users=sent_receiver_map
+        sent_users=sent_receiver_map,
+        blocked_usernames=blocked_usernames
     )
+
+@app.route('/block/<username>')
+def block_user(username):
+    if 'user_id' not in session:
+        flash("Please log in first.", "danger")
+        return redirect(url_for('login'))
+
+    blocked = session.get('blocked_users', [])
+    if username not in blocked:
+        blocked.append(username)
+        session['blocked_users'] = blocked
+    flash(f"{username} has been blocked.", "info")
+    return redirect(url_for('inner_home'))
+
+@app.route('/unblock/<username>')
+def unblock_user(username):
+    if 'user_id' not in session:
+        flash("Please log in first.", "danger")
+        return redirect(url_for('login'))
+
+    blocked = session.get('blocked_users', [])
+    if username in blocked:
+        blocked.remove(username)
+        session['blocked_users'] = blocked
+    flash(f"{username} has been unblocked.", "info")
+    return redirect(url_for('inner_home'))
 
 @app.route('/post_message', methods=['POST'])
 def post_message():
     if 'user_id' not in session:
         flash('Please log in first.', 'danger')
         return redirect(url_for('login'))
+
     content = request.form.get('content')
     visibility = request.form.get('visibility')
     selected_friends = request.form.getlist('friends')
     friend_ids_json = json.dumps([int(fid) for fid in selected_friends]) if visibility == 'private' else '[]'
+
     user = db.session.get(User, session['user_id'])
     new_post = Post(content=content, username=user.username, user_id=user.id, visibility=visibility, friend_ids=friend_ids_json)
     db.session.add(new_post)
@@ -196,7 +221,6 @@ def send_request(receiver_id):
             else:
                 flash('Friend request already sent.', 'info')
     return redirect(url_for('inner_home'))
-
 
 @app.route('/accept_request/<int:request_id>')
 def accept_request(request_id):
@@ -227,15 +251,12 @@ def cancel_request(request_id):
         flash('Friend request cancelled.', 'info')
     return redirect(url_for('inner_home'))
 
-
 @app.route('/unfriend/<int:friend_id>')
 def unfriend(friend_id):
     user_id = session.get('user_id')
     if user_id:
         Friend.query.filter_by(user_id=user_id, friend_id=friend_id).delete()
         Friend.query.filter_by(user_id=friend_id, friend_id=user_id).delete()
-
-        # Clean up any accepted friend request between these users
         FriendRequest.query.filter(
             ((FriendRequest.sender_id == user_id) & (FriendRequest.receiver_id == friend_id)) |
             ((FriendRequest.sender_id == friend_id) & (FriendRequest.receiver_id == user_id))
@@ -244,7 +265,6 @@ def unfriend(friend_id):
         db.session.commit()
         flash('Unfriended successfully.', 'info')
     return redirect(url_for('inner_home'))
-
 
 @app.route('/chat')
 def chat():
@@ -259,7 +279,6 @@ def confirm_delete():
         flash("Login required.", "danger")
         return redirect(url_for('login'))
     return render_template('delete_confirm.html')
-
 
 @app.route('/logout')
 def logout():
@@ -276,7 +295,6 @@ def private_chat(friend_id):
     user_id = session['user_id']
     friend = User.query.get_or_404(friend_id)
 
-    # Send message
     if request.method == 'POST':
         message = request.form.get('message')
         if message:
@@ -286,7 +304,6 @@ def private_chat(friend_id):
             flash("Message sent!", "success")
         return redirect(url_for('private_chat', friend_id=friend_id))
 
-    # Get messages between the two users
     messages = PrivateMessage.query.filter(
         ((PrivateMessage.sender_id == user_id) & (PrivateMessage.receiver_id == friend_id)) |
         ((PrivateMessage.sender_id == friend_id) & (PrivateMessage.receiver_id == user_id))
@@ -308,8 +325,6 @@ def delete_account():
         return redirect(url_for('confirm_delete'))
 
     user_id = user.id
-
-    # Delete related data
     FriendRequest.query.filter((FriendRequest.sender_id == user_id) | (FriendRequest.receiver_id == user_id)).delete()
     Friend.query.filter((Friend.user_id == user_id) | (Friend.friend_id == user_id)).delete()
     Post.query.filter_by(user_id=user_id).delete()
@@ -321,73 +336,8 @@ def delete_account():
     session.clear()
     flash("Your account has been permanently deleted.", "info")
     return redirect(url_for('home'))
-@app.route('/get_visible_posts')
-def get_visible_posts():
-    if 'user_id' not in session:
-        return {'error': 'Unauthorized'}, 401
-
-    user = User.query.get(session['user_id'])
-    lat = float(request.args.get('lat', user.latitude))
-    lon = float(request.args.get('lon', user.longitude))
-
-    user.latitude = lat
-    user.longitude = lon
-    db.session.commit()
-
-    all_posts = Post.query.all()
-    visible_posts = []
-
-    for post in all_posts:
-        post_user = User.query.get(post.user_id)
-        if post.visibility == 'public':
-            if within_10km(lat, lon, post_user.latitude, post_user.longitude):
-                visible_posts.append({
-                    'username': post.username,
-                    'content': post.content,
-                    'visibility': post.visibility
-                })
-        elif post.visibility == 'private':
-            allowed_friends = json.loads(post.friend_ids)
-            if user.id == post.user_id or user.id in allowed_friends:
-                visible_posts.append({
-                    'username': post.username,
-                    'content': post.content,
-                    'visibility': post.visibility
-                })
-
-    return {'posts': visible_posts}
-
-@app.route('/get_posts')
-def get_posts():
-    if 'user_id' not in session:
-        return "Not authorized", 401
-
-    user = db.session.get(User, session['user_id'])
-    lat = float(request.args.get('lat', user.latitude))
-    lon = float(request.args.get('lon', user.longitude))
-
-    user.latitude = lat
-    user.longitude = lon
-    db.session.commit()
-
-    all_posts = Post.query.all()
-    visible_posts = []
-
-    for post in all_posts:
-        post_user = db.session.get(User, post.user_id)
-        if post.visibility == 'public':
-            if within_10km(lat, lon, post_user.latitude, post_user.longitude):
-                visible_posts.append(post)
-        elif post.visibility == 'private':
-            allowed_friends = json.loads(post.friend_ids)
-            if user.id == post.user_id or user.id in allowed_friends:
-                visible_posts.append(post)
-
-    return render_template('partials/posts.html', posts=visible_posts)
 
 if __name__ == '__main__':
     import os
-    port = int(os.environ.get('PORT', 10000))  # 10000 is Render's default
+    port = int(os.environ.get('PORT', 10000))
     app.run(debug=True, host='0.0.0.0', port=port)
-
-

@@ -2,18 +2,17 @@
 <html lang="en">
 <head>
     <script>
-        // Fetch current location and reload the page with lat/lon in query
         window.onload = function () {
-            if (!window.location.search.includes("lat=")) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    const lat = position.coords.latitude;
-                    const lon = position.coords.longitude;
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set("lat", lat);
-                    currentUrl.searchParams.set("lon", lon);
-                    window.location.href = currentUrl.toString(); // reload with location
-                });
-            }
+          if (!window.location.search.includes("lat=")) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+              const lat = position.coords.latitude;
+              const lon = position.coords.longitude;
+              const currentUrl = new URL(window.location.href);
+              currentUrl.searchParams.set("lat", lat);
+              currentUrl.searchParams.set("lon", lon);
+              window.location.href = currentUrl.toString();
+            });
+          }
         };
     </script>
 
@@ -34,7 +33,7 @@
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
           width: 80%;
         }
-        textarea, select, .friend-select {
+        textarea, select {
           width: 100%;
           padding: 10px;
           font-size: 1rem;
@@ -62,6 +61,7 @@
           border-left: 5px solid #007bff;
           border-radius: 5px;
           text-align: left;
+          position: relative;
         }
         .post small {
           display: block;
@@ -84,16 +84,71 @@
           background-color: #0056b3;
         }
 
-         a.unfriend-button:hover {
-    background-color: #b52a35;
-  }
+        .btn {
+          text-decoration: none;
+          padding: 6px 12px;
+          border-radius: 5px;
+          font-weight: bold;
+          color: white;
+          margin: 5px;
+          display: inline-block;
+        }
+        .btn.green { background-color: #28a745; }
+        .btn.red { background-color: #dc3545; }
+        .btn.blue { background-color: #007bff; }
+
+        .options-button {
+          background-color: #ccc;
+          border: none;
+          border-radius: 50%;
+          width: 28px;
+          height: 28px;
+          cursor: pointer;
+          font-size: 16px;
+          float: right;
+        }
+        .options-menu {
+          display: none;
+          position: absolute;
+          top: 40px;
+          right: 10px;
+          background-color: white;
+          border: 1px solid #ccc;
+          border-radius: 5px;
+          box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
+          z-index: 100;
+        }
+        .options-menu a {
+          display: block;
+          padding: 8px 12px;
+          text-decoration: none;
+          color: #333;
+        }
+        .options-menu a:hover {
+          background-color: #f2f2f2;
+        }
     </style>
+
     <script>
         function toggleFriendList() {
           const visibility = document.getElementById('visibility').value;
           const friendDiv = document.getElementById('friend-list');
           friendDiv.style.display = visibility === 'private' ? 'block' : 'none';
         }
+
+        function toggleMenu(button) {
+          const menu = button.nextElementSibling;
+          document.querySelectorAll('.options-menu').forEach(m => {
+            if (m !== menu) m.style.display = 'none';
+          });
+          menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+        }
+
+        document.addEventListener('click', function(e) {
+          if (!e.target.classList.contains('options-button')) {
+            document.querySelectorAll('.options-menu').forEach(m => m.style.display = 'none');
+          }
+        });
     </script>
 </head>
 <body>
@@ -101,17 +156,16 @@
 <div class="container">
     <h1>Welcome, {{ username }} 👋</h1>
 
-    <!-- ✅ Post Form -->
+    <!-- Post Form -->
     <form method="POST" action="{{ url_for('post_message') }}">
         <textarea name="content" placeholder="What's on your mind?" required></textarea><br>
 
         <label for="visibility">Visibility:</label>
         <select name="visibility" id="visibility" onchange="toggleFriendList()" required>
-            <option value="public">Public (visible to all nearby users)</option>
-            <option value="private">Private (only selected friends)</option>
+            <option value="public">Public</option>
+            <option value="private">Private</option>
         </select><br>
 
-        <!-- ✅ Friend Selection (only for private) -->
         <div id="friend-list" style="display: none;">
             <label>Select friends to share this post with:</label><br>
             {% for friend in friends %}
@@ -124,13 +178,35 @@
         <button type="submit">Post</button>
     </form>
 
-    <!-- ✅ Display Posts -->
+    <!-- Display Posts -->
     <div class="posts" id="posts-container">
         <h2>📬 Recent Posts</h2>
-        <p>Loading posts...</p>
+        {% for post in posts %}
+        <div class="post" data-user="{{ post.username }}">
+            <div>
+                <strong>@{{ post.username }}</strong>
+                <button class="options-button" onclick="toggleMenu(this)">+</button>
+                <div class="options-menu">
+                    {% set post_user = users.values()|selectattr('username', 'equalto', post.username)|list|first %}
+                    {% if post_user.id != session['user_id'] %}
+                    {% set is_friend = confirmed_friends|selectattr('id', 'equalto', post_user.id)|list %}
+                    {% set existing_request = sent_requests|selectattr('receiver_id', 'equalto', post_user.id)|list %}
+                    {% if not is_friend and not existing_request %}
+                    <a href="{{ url_for('send_request', receiver_id=post_user.id) }}">✅ Send Friend Request</a>
+                    {% elif existing_request %}
+                    <span style="padding: 10px 12px; display: block; color: gray;">Request Sent</span>
+                    {% endif %}
+                    <a href="{{ url_for('block_user', username=post.username) }}">🚫 Block User</a>
+                    {% endif %}
+                </div>
+            </div>
+            <div>{{ post.content }}</div>
+            <small>Visibility: {{ post.visibility }}</small>
+        </div>
+        {% endfor %}
     </div>
 
-
+    <!-- Friend List -->
     <hr><br>
     <h2>👥 Your Friends</h2>
     {% if confirmed_friends %}
@@ -138,70 +214,41 @@
         {% for friend in confirmed_friends %}
         <li style="margin-bottom: 10px;">
             <strong>{{ friend.username }}</strong><br>
-
-            <a href="{{ url_for('unfriend', friend_id=friend.id) }}"
-               class="unfriend-button"
-               style="color: white; background-color: #dc3545; padding: 5px 10px; border-radius: 5px; text-decoration: none;">
-                ❌ Unfriend
-            </a>
-
-            <a href="{{ url_for('private_chat', friend_id=friend.id) }}"
-               class="chat-button"
-               style="color: white; background-color: #17a2b8; padding: 5px 10px; border-radius: 5px; text-decoration: none; margin-left: 10px;">
-                💬 Chat
-            </a>
+            <a href="{{ url_for('unfriend', friend_id=friend.id) }}" class="btn red">❌ Unfriend</a>
+            <a href="{{ url_for('private_chat', friend_id=friend.id) }}" class="btn blue">💬 Chat</a>
         </li>
-
         {% endfor %}
     </ul>
     {% else %}
     <p>You have no confirmed friends yet.</p>
     {% endif %}
 
-
-    <hr><br>
-    <h2>🤝 Add Friends</h2>
-    {% for friend in friends %}
-    <div style="margin: 10px 0;">
-        <strong>{{ friend.username }}</strong>
-        {% set existing_request = sent_requests | selectattr('receiver_id', 'equalto', friend.id) | list %}
-        {% if existing_request %}
-        <span style="color: gray;">Request Sent</span>
-        {% else %}
-        <a href="{{ url_for('send_request', receiver_id=friend.id) }}">Send Friend Request</a>
-        {% endif %}
-    </div>
-    {% endfor %}
-
-
+    <!-- Friend Requests -->
     <hr><br>
     <h2>📥 Incoming Friend Requests</h2>
     {% if friend_requests %}
-    <div style="margin: 10px 0;">
+    <div>
         {% for req in friend_requests %}
-        {% set sender = users[req.sender_id] if req.sender_id in users else req.sender_id %}
-        <strong>Request from: @{{ sender.username if sender.username else sender }}</strong><br>
-        <a href="{{ url_for('accept_request', request_id=req.id) }}">✅ Accept</a>
-        <a href="{{ url_for('reject_request', request_id=req.id) }}">❌ Reject</a>
+        {% set sender = users[req.sender_id] %}
+        <strong>Request from: @{{ sender.username }}</strong><br>
+        <a href="{{ url_for('accept_request', request_id=req.id) }}" class="btn green">✅ Accept</a>
+        <a href="{{ url_for('reject_request', request_id=req.id) }}" class="btn red">❌ Reject</a>
         {% endfor %}
     </div>
     {% else %}
     <p>No new friend requests.</p>
     {% endif %}
 
-
+    <!-- Sent Requests -->
     <hr><br>
     <h2>📤 Sent Friend Requests</h2>
     {% if sent_requests %}
     <ul>
         {% for req in sent_requests %}
-        {% set receiver = sent_users[req.receiver_id] if req.receiver_id in sent_users else req.receiver_id %}
+        {% set receiver = sent_users[req.receiver_id] %}
         <li>
-            Sent to: @{{ receiver.username if receiver.username else receiver }}<br>
-            <a href="{{ url_for('cancel_request', request_id=req.id) }}"
-               style="color: white; background-color: #dc3545; padding: 5px 10px; border-radius: 5px; text-decoration: none;">
-                ❌ Cancel
-            </a>
+            Sent to: @{{ receiver.username }}
+            <a href="{{ url_for('cancel_request', request_id=req.id) }}" class="btn red">❌ Cancel</a>
         </li>
         {% endfor %}
     </ul>
@@ -209,6 +256,21 @@
     <p>No pending friend requests sent.</p>
     {% endif %}
 
+    <!-- Blocked Users -->
+    <hr><br>
+    <h2>🚫 Blocked Users</h2>
+    {% if blocked_usernames %}
+    <ul style="list-style: none; padding-left: 0;">
+        {% for uname in blocked_usernames %}
+        <li style="margin: 10px 0;">
+            <strong>@{{ uname }}</strong>
+            <a href="{{ url_for('unblock_user', username=uname) }}" class="btn blue">Unblock</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No users blocked.</p>
+    {% endif %}
 
     <!-- Navigation -->
     <div class="nav-links">
@@ -216,36 +278,11 @@
         <a href="{{ url_for('home') }}">Home</a>
     </div>
 
-    <!-- 🗑️ Account Deletion -->
+    <!-- Delete Account -->
     <form action="{{ url_for('confirm_delete') }}" method="GET">
-        <button type="submit" style="margin-top: 20px; background-color: #dc3545; color: white; padding: 10px 20px; border: none; border-radius: 5px;">
-            🗑️ Delete My Account
-        </button>
+        <button type="submit" style="margin-top: 20px; background-color: #dc3545; color: white;">🗑️ Delete My Account</button>
     </form>
-
 </div>
-<script>
-    document.addEventListener("DOMContentLoaded", () => {
-      function fetchPosts(lat, lon) {
-        fetch(`/get_posts?lat=${lat}&lon=${lon}`)
-          .then(res => res.text())
-          .then(html => {
-            document.getElementById("posts-container").innerHTML = html;
-          })
-          .catch(err => console.error("Failed to load posts:", err));
-      }
-
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(position => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          fetchPosts(lat, lon);
-        }, () => {
-          console.warn("Geolocation denied. Using default posts.");
-        });
-      }
-    });
-</script>
 
 </body>
 </html>
