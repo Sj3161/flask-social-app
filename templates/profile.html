@@ -1,0 +1,22 @@
+<!-- templates/profile.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ user.username }}'s Profile</title>
+</head>
+<body>
+<h1>{{ user.username }}</h1>
+<img src="{{ url_for('static', filename='profile_pics/' + user.profile_pic) }}" width="150" height="150" alt="Profile Pic">
+<p><strong>Bio:</strong> {{ user.bio }}</p>
+
+{% if is_self %}
+<p>This is your profile.</p>
+{% elif is_friend %}
+<p>✅ You are friends</p>
+{% elif can_send_request %}
+<a href="{{ url_for('send_request', receiver_id=user.id) }}">➕ Send Friend Request</a>
+{% endif %}
+
+<a href="{{ url_for('inner_home') }}">← Back to Home</a>
+</body>
+</html>

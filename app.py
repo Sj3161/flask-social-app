@@ -1,7 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, session
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-import os
 from math import radians, cos, sin, asin, sqrt
 import json
 
@@ -19,6 +18,8 @@ class User(db.Model):
     password = db.Column(db.String(60), nullable=False)
     latitude = db.Column(db.Float, default=12.9716)
     longitude = db.Column(db.Float, default=77.5946)
+
+
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -383,7 +384,6 @@ def get_posts():
                 visible_posts.append(post)
 
     return render_template('partials/posts.html', posts=visible_posts)
-
 
 if __name__ == '__main__':
     import os

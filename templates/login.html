@@ -1,20 +1,50 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
     <title>Login</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
+
+<!-- 🌙/🌞 Toggle Button -->
+<button onclick="toggleDarkMode()" class="toggle-btn">🌙 Dark Mode</button>
+
 <div class="login-container">
     <h1>Login</h1>
     <form method="POST">
         <label for="email">Email:</label>
         <input type="email" id="email" name="email" required>
+
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
+
         <button type="submit">Login</button>
     </form>
     <a href="{{ url_for('signup') }}">Don't have an account? Sign Up</a>
 </div>
+
+<!-- 🔁 JavaScript to Handle Toggle + Save Preference -->
+<script>
+    // Apply dark mode on page load if saved
+    window.onload = function () {
+        const isDark = localStorage.getItem("darkMode") === "true";
+        document.body.classList.toggle('dark-mode', isDark);
+        updateToggleBtn(isDark);
+    }
+
+    function toggleDarkMode() {
+        const isDark = document.body.classList.toggle('dark-mode');
+        localStorage.setItem("darkMode", isDark);
+        updateToggleBtn(isDark);
+    }
+
+    function updateToggleBtn(isDark) {
+        const btn = document.querySelector('.toggle-btn');
+        btn.textContent = isDark ? '🌞 Light Mode' : '🌙 Dark Mode';
+    }
+</script>
+
 </body>
 </html>
+
