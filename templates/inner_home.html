@@ -167,6 +167,11 @@
     <form method="POST" action="{{ url_for('post_message') }}">
         <textarea name="content" placeholder="What's on your mind?" required></textarea><br>
 
+        <label>
+            <input type="checkbox" name="is_anonymous" value="true">
+            Post as Anonymous 🤐
+        </label><br>
+
         <label for="visibility">Visibility:</label>
         <select name="visibility" id="visibility" onchange="toggleFriendList()" required>
             <option value="public">Public</option>
@@ -197,15 +202,40 @@
 
     <!-- Display Posts -->
     <div class="posts" id="posts-container">
+        {% if posts and posts|length > 0 %}
+        <pre style="text-align: left; background: #f0f0f0; padding: 10px; border-radius: 6px;">
+    {{ posts[0] }}
+  </pre>
+        {% else %}
+        <p>No posts yet.</p>
+        {% endif %}
+
         <h2>📬 Recent Posts</h2>
+
+        {% if posts %}
+        <pre style="text-align: left; background: #f0f0f0; padding: 10px; border-radius: 6px;">
+        {{ posts[0] }}
+      </pre>
+        {% else %}
+        <p>No posts yet.</p>
+        {% endif %}
+
+
         {% for post in posts %}
         <div class="post" data-user="{{ post.username }}">
             <div>
-                <strong>@{{ post.username }}</strong>
+                <strong>
+                    {% if post.is_anonymous %}
+                    🕵️ Anonymous
+                    {% else %}
+                    @{{ post.username }}
+                    {% endif %}
+                </strong>
+
                 <button class="options-button" onclick="toggleMenu(this)">+</button>
                 <div class="options-menu">
-                    {% set post_user = users.values()|selectattr('username', 'equalto', post.username)|list|first %}
-                    {% if post_user.id != session['user_id'] %}
+                    {% set post_user = users.values() | selectattr('username', 'equalto', post.username) | list | first %}
+                    {% if post_user and post_user.id != session['user_id'] %}
                     {% set is_friend = confirmed_friends|selectattr('id', 'equalto', post_user.id)|list %}
                     {% set existing_request = sent_requests|selectattr('receiver_id', 'equalto', post_user.id)|list %}
                     {% if not is_friend and not existing_request %}

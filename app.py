@@ -34,6 +34,8 @@ class Post(db.Model):
     visibility = db.Column(db.String(10), nullable=False, default='public')
     friend_ids = db.Column(db.Text, default='[]')
     tag = db.Column(db.String(50), default='general')
+    is_anonymous = db.Column(db.Boolean, default=False)
+
 
 class PrivateGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -65,15 +67,17 @@ class Notification(db.Model):
     message = db.Column(db.String(255))
     seen = db.Column(db.Boolean, default=False)
     timestamp = db.Column(db.DateTime, default=db.func.now())
+    type = db.Column(db.String(50), default='general')  # Add this line
+
 
 
 with app.app_context():
     try:
         with db.engine.connect() as conn:
-            conn.execute(text("ALTER TABLE post ADD COLUMN tag VARCHAR(50) DEFAULT 'general';"))
-            print("✅ 'tag' column added to Post table.")
+            conn.execute(text("ALTER TABLE notification ADD COLUMN type VARCHAR(50) DEFAULT 'general';"))
+            print("✅ 'type' column added to Notification table.")
     except Exception as e:
-        print("⚠️ Column might already exist or error occurred:", e)
+        print("⚠️ Error or already exists:", e)
 
     # To check columns
     with db.engine.connect() as conn:
@@ -191,6 +195,8 @@ def inner_home():
     all_users = User.query.filter(User.id != user.id, ~User.id.in_(excluded_ids)).all()
     sent_receiver_map = {u.id: u for u in User.query.filter(User.id.in_([r.receiver_id for r in sent_requests])).all()}
 
+    print("🚨 DEBUG: Number of posts being passed to template =", len(visible_posts))
+
     return render_template(
         'inner_home.html',
         posts=visible_posts,
@@ -239,23 +245,27 @@ def post_message():
     content = request.form.get('content')
     visibility = request.form.get('visibility')
     selected_friends = request.form.getlist('friends')
-    tag = request.form.get('tag') or "general"  # default to general
+    tag = request.form.get('tag') or "general"
+    is_anonymous = request.form.get('is_anonymous') == 'true'  # ✅ Add this line here
 
     friend_ids_json = json.dumps([int(fid) for fid in selected_friends]) if visibility == 'private' else '[]'
 
     user = db.session.get(User, session['user_id'])
+
     new_post = Post(
         content=content,
-        username=user.username,
+        username="Anonymous" if is_anonymous else user.username,  # 👈 conditionally set username
         user_id=user.id,
         visibility=visibility,
         friend_ids=friend_ids_json,
-        tag=tag
+        tag=tag,
+        is_anonymous=is_anonymous  # ✅ Pass to the model
     )
+
     db.session.add(new_post)
     db.session.commit()
 
-    # 🔔 If it's tagged as emergency, notify all friends nearby
+    # Optional: Notify friends if tagged as emergency
     if tag == 'emergency':
         friend_links = Friend.query.filter_by(user_id=user.id).all()
         friend_ids = [f.friend_id for f in friend_links]
@@ -266,6 +276,7 @@ def post_message():
 
     flash("Post shared!", "success")
     return redirect(url_for('inner_home'))
+
 
 
 @app.route('/send_request/<int:receiver_id>')
