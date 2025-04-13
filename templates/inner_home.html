@@ -156,6 +156,13 @@
 <div class="container">
     <h1>Welcome, {{ username }} 👋</h1>
 
+    <!-- 🔔 Notifications -->
+    <div class="notification-box" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+        <strong>🔔 Notifications <span id="notifCount">(0)</span></strong>
+        <div id="notifBox" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
+    </div>
+
+
     <!-- Post Form -->
     <form method="POST" action="{{ url_for('post_message') }}">
         <textarea name="content" placeholder="What's on your mind?" required></textarea><br>
@@ -166,14 +173,24 @@
             <option value="private">Private</option>
         </select><br>
 
+        <label for="tag">Tag:</label>
+        <select name="tag" id="tag" required>
+            <option value="general">General</option>
+            <option value="emergency">🚨 Emergency</option>
+            <option value="event">📅 Event</option>
+            <option value="info">ℹ️ Info</option>
+        </select><br>
+
+
         <div id="friend-list" style="display: none;">
             <label>Select friends to share this post with:</label><br>
-            {% for friend in friends %}
+            {% for friend in confirmed_friends %}
             <div style="text-align: left;">
                 <input type="checkbox" name="friends" value="{{ friend.id }}"> {{ friend.username }}
             </div>
             {% endfor %}
         </div>
+
 
         <button type="submit">Post</button>
     </form>
@@ -201,7 +218,7 @@
                 </div>
             </div>
             <div>{{ post.content }}</div>
-            <small>Visibility: {{ post.visibility }}</small>
+            <small>Visibility: {{ post.visibility }}{% if post.tag %} | Tag: {{ post.tag }}{% endif %}</small>
         </div>
         {% endfor %}
     </div>
@@ -283,6 +300,57 @@
         <button type="submit" style="margin-top: 20px; background-color: #dc3545; color: white;">🗑️ Delete My Account</button>
     </form>
 </div>
+
+<div id="toast" style="
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: #333;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+    z-index: 9999;
+">🔔 <span id="toast-message"></span></div>
+
+<script>
+    function showToast(msg) {
+        const toast = document.getElementById("toast");
+        document.getElementById("toast-message").textContent = msg;
+        toast.style.display = "block";
+        setTimeout(() => { toast.style.display = "none"; }, 4000);
+    }
+
+    function fetchNotifications() {
+        fetch('/notifications')
+            .then(res => res.json())
+            .then(data => {
+                const box = document.getElementById("notifBox");
+                const count = document.getElementById("notifCount");
+                box.innerHTML = '';
+                count.textContent = `(${data.length})`;
+
+                if (data.length === 0) {
+                    box.innerHTML = "<i>No new notifications</i>";
+                } else {
+                    data.forEach(n => {
+                        const div = document.createElement("div");
+                        div.style.marginBottom = "5px";
+                        div.textContent = `${n.timestamp}: ${n.message}`;
+                        box.appendChild(div);
+                        showToast(n.message);  // ✅ toast only, no sound
+                    });
+
+                    fetch('/notifications/seen', { method: 'POST' });
+                }
+            });
+    }
+
+    fetchNotifications();
+    setInterval(fetchNotifications, 15000);
+</script>
+
 
 </body>
 </html>

@@ -1,5 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, session
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import text
 from werkzeug.security import generate_password_hash, check_password_hash
 from math import radians, cos, sin, asin, sqrt
 import json
@@ -10,6 +11,9 @@ app.config['SECRET_KEY'] = 'your_secret_key'
 app.config['SESSION_TYPE'] = 'filesystem'
 
 db = SQLAlchemy(app)
+from flask_migrate import Migrate
+migrate = Migrate(app, db)
+
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -18,6 +22,9 @@ class User(db.Model):
     password = db.Column(db.String(60), nullable=False)
     latitude = db.Column(db.Float, default=12.9716)
     longitude = db.Column(db.Float, default=77.5946)
+    mute_messages = db.Column(db.Boolean, default=False)
+    mute_posts = db.Column(db.Boolean, default=False)
+    mute_requests = db.Column(db.Boolean, default=False)
 
 class Post(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -26,6 +33,7 @@ class Post(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     visibility = db.Column(db.String(10), nullable=False, default='public')
     friend_ids = db.Column(db.Text, default='[]')
+    tag = db.Column(db.String(50), default='general')
 
 class PrivateGroup(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -49,9 +57,31 @@ class PrivateMessage(db.Model):
     receiver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     message = db.Column(db.Text, nullable=False)
     timestamp = db.Column(db.DateTime, default=db.func.now())
+    type = db.Column(db.String(50), default='general')
+
+class Notification(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    message = db.Column(db.String(255))
+    seen = db.Column(db.Boolean, default=False)
+    timestamp = db.Column(db.DateTime, default=db.func.now())
+
 
 with app.app_context():
-    db.create_all()
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE post ADD COLUMN tag VARCHAR(50) DEFAULT 'general';"))
+            print("✅ 'tag' column added to Post table.")
+    except Exception as e:
+        print("⚠️ Column might already exist or error occurred:", e)
+
+    # To check columns
+    with db.engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(post);"))
+        for row in result:
+            print(row)
+
+
 
 def within_10km(lat1, lon1, lat2, lon2):
     R = 6371
@@ -60,6 +90,21 @@ def within_10km(lat1, lon1, lat2, lon2):
     a = sin(dlat/2)**2 + cos(radians(lat1)) * cos(radians(lat2)) * sin(dlon/2)**2
     c = 2 * asin(sqrt(a))
     return R * c <= 10
+
+def send_notification(user_id, message, notif_type='general'):
+    user = User.query.get(user_id)
+    if notif_type == 'message' and user.mute_messages:
+        return
+    if notif_type == 'post' and user.mute_posts:
+        return
+    if notif_type == 'friend_request' and user.mute_requests:
+        return
+
+    notification = Notification(user_id=user_id, message=message, type=notif_type)
+    db.session.add(notification)
+    db.session.commit()
+
+
 
 @app.route('/')
 def home():
@@ -194,14 +239,34 @@ def post_message():
     content = request.form.get('content')
     visibility = request.form.get('visibility')
     selected_friends = request.form.getlist('friends')
+    tag = request.form.get('tag') or "general"  # default to general
+
     friend_ids_json = json.dumps([int(fid) for fid in selected_friends]) if visibility == 'private' else '[]'
 
     user = db.session.get(User, session['user_id'])
-    new_post = Post(content=content, username=user.username, user_id=user.id, visibility=visibility, friend_ids=friend_ids_json)
+    new_post = Post(
+        content=content,
+        username=user.username,
+        user_id=user.id,
+        visibility=visibility,
+        friend_ids=friend_ids_json,
+        tag=tag
+    )
     db.session.add(new_post)
     db.session.commit()
+
+    # 🔔 If it's tagged as emergency, notify all friends nearby
+    if tag == 'emergency':
+        friend_links = Friend.query.filter_by(user_id=user.id).all()
+        friend_ids = [f.friend_id for f in friend_links]
+        for fid in friend_ids:
+            friend = User.query.get(fid)
+            if friend and within_10km(user.latitude, user.longitude, friend.latitude, friend.longitude):
+                send_notification(fid, f"🚨 Emergency post from @{user.username}")
+
     flash("Post shared!", "success")
     return redirect(url_for('inner_home'))
+
 
 @app.route('/send_request/<int:receiver_id>')
 def send_request(receiver_id):
@@ -336,6 +401,33 @@ def delete_account():
     session.clear()
     flash("Your account has been permanently deleted.", "info")
     return redirect(url_for('home'))
+
+@app.route('/notifications')
+def get_notifications():
+    if 'user_id' not in session:
+        return jsonify([])
+    user_id = session['user_id']
+    notifs = Notification.query.filter_by(user_id=user_id, seen=False).order_by(Notification.timestamp.desc()).all()
+    return jsonify([
+        {"id": n.id, "message": n.message, "timestamp": n.timestamp.strftime('%Y-%m-%d %H:%M')}
+        for n in notifs
+    ])
+
+@app.route('/notifications/seen', methods=['POST'])
+def mark_notifications_seen():
+    if 'user_id' not in session:
+        return '', 401
+    user_id = session['user_id']
+    Notification.query.filter_by(user_id=user_id, seen=False).update({"seen": True})
+    db.session.commit()
+    return '', 204
+
+with app.app_context():
+    with db.engine.connect() as conn:
+        result = conn.execute(text("PRAGMA table_info(post);"))
+        print("🔵 Columns in post table:")
+        for row in result:
+            print(row)
 
 if __name__ == '__main__':
     import os
