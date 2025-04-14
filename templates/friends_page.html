@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Your Friends</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef1f5;
+            text-align: center;
+            padding: 40px;
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        .friend-list {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .friend-card {
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 15px 20px;
+            width: 320px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+        }
+
+        .friend-name {
+            font-weight: bold;
+            color: #333;
+            flex: 1;
+            text-align: left;
+        }
+
+        .btn {
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-left: 10px;
+        }
+
+        .btn.unfriend {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn.chat {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .no-friends {
+            color: #555;
+            font-size: 1rem;
+            background: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+
+<h2>👥 Your Friends</h2>
+
+{% if confirmed_friends %}
+<div class="friend-list">
+    {% for friend in confirmed_friends %}
+    <div class="friend-card">
+        <span class="friend-name">{{ friend.username }}</span>
+        <a href="{{ url_for('unfriend', friend_id=friend.id) }}" class="btn unfriend">❌ Unfriend</a>
+        <a href="{{ url_for('private_chat', friend_id=friend.id) }}" class="btn chat">💬 Chat</a>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="no-friends">No friends yet.</p>
+{% endif %}
+
+</body>
+</html>

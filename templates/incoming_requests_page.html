@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Incoming Friend Requests</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #eef1f5; text-align: center; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: inline-block; }
+        .btn { text-decoration: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; color: white; margin: 5px; display: inline-block; }
+        .btn.green { background-color: #28a745; }
+        .btn.red { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>📥 Incoming Friend Requests</h2>
+    {% if friend_requests %}
+    {% for req in friend_requests %}
+    {% set sender = users[req.sender_id] %}
+    <p><strong>@{{ sender.username }}</strong></p>
+    <a href="{{ url_for('accept_request', request_id=req.id) }}" class="btn green">✅ Accept</a>
+    <a href="{{ url_for('reject_request', request_id=req.id) }}" class="btn red">❌ Reject</a>
+    {% endfor %}
+    {% else %}
+    <p>No new friend requests.</p>
+    {% endif %}
+</div>
+</body>
+</html>

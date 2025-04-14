@@ -252,83 +252,6 @@
         </div>
         {% endfor %}
     </div>
-
-    <!-- Friend List -->
-    <hr><br>
-    <h2>👥 Your Friends</h2>
-    {% if confirmed_friends %}
-    <ul style="list-style: none; padding: 0;">
-        {% for friend in confirmed_friends %}
-        <li style="margin-bottom: 10px;">
-            <strong>{{ friend.username }}</strong><br>
-            <a href="{{ url_for('unfriend', friend_id=friend.id) }}" class="btn red">❌ Unfriend</a>
-            <a href="{{ url_for('private_chat', friend_id=friend.id) }}" class="btn blue">💬 Chat</a>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>You have no confirmed friends yet.</p>
-    {% endif %}
-
-    <!-- Friend Requests -->
-    <hr><br>
-    <h2>📥 Incoming Friend Requests</h2>
-    {% if friend_requests %}
-    <div>
-        {% for req in friend_requests %}
-        {% set sender = users[req.sender_id] %}
-        <strong>Request from: @{{ sender.username }}</strong><br>
-        <a href="{{ url_for('accept_request', request_id=req.id) }}" class="btn green">✅ Accept</a>
-        <a href="{{ url_for('reject_request', request_id=req.id) }}" class="btn red">❌ Reject</a>
-        {% endfor %}
-    </div>
-    {% else %}
-    <p>No new friend requests.</p>
-    {% endif %}
-
-    <!-- Sent Requests -->
-    <hr><br>
-    <h2>📤 Sent Friend Requests</h2>
-    {% if sent_requests %}
-    <ul>
-        {% for req in sent_requests %}
-        {% set receiver = sent_users[req.receiver_id] %}
-        <li>
-            Sent to: @{{ receiver.username }}
-            <a href="{{ url_for('cancel_request', request_id=req.id) }}" class="btn red">❌ Cancel</a>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>No pending friend requests sent.</p>
-    {% endif %}
-
-    <!-- Blocked Users -->
-    <hr><br>
-    <h2>🚫 Blocked Users</h2>
-    {% if blocked_usernames %}
-    <ul style="list-style: none; padding-left: 0;">
-        {% for uname in blocked_usernames %}
-        <li style="margin: 10px 0;">
-            <strong>@{{ uname }}</strong>
-            <a href="{{ url_for('unblock_user', username=uname) }}" class="btn blue">Unblock</a>
-        </li>
-        {% endfor %}
-    </ul>
-    {% else %}
-    <p>No users blocked.</p>
-    {% endif %}
-
-    <!-- Navigation -->
-    <div class="nav-links">
-        <a href="{{ url_for('logout') }}">Logout</a>
-        <a href="{{ url_for('home') }}">Home</a>
-    </div>
-
-    <!-- Delete Account -->
-    <form action="{{ url_for('confirm_delete') }}" method="GET">
-        <button type="submit" style="margin-top: 20px; background-color: #dc3545; color: white;">🗑️ Delete My Account</button>
-    </form>
 </div>
 
 <div id="toast" style="
@@ -381,6 +304,36 @@
     setInterval(fetchNotifications, 15000);
 </script>
 
+<script>
+    function toggleMenu() {
+        const menu = document.getElementById("moreMenu");
+        menu.style.display = (menu.style.display === "block") ? "none" : "block";
+    }
+
+    document.addEventListener("click", function(event) {
+        const menu = document.getElementById("moreMenu");
+        const menuButton = event.target.closest("div[onclick='toggleMenu()']");
+        if (!menu.contains(event.target) && !menuButton) {
+            menu.style.display = "none";
+        }
+    });
+</script>
+
 
 </body>
+<!-- 3-Dot Dropdown Menu -->
+<div style="position: absolute; top: 20px; right: 30px;">
+    <div style="cursor: pointer; font-size: 24px;" onclick="toggleMenu()">⋮</div>
+
+    <div id="moreMenu" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; border-radius: 5px; padding: 10px; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
+        <a href="/friends" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">👥 Your Friends</a>
+        <a href="/friend_requests" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">📥 Incoming Requests</a>
+        <a href="/sent_requests" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">📤 Sent Requests</a>
+        <a href="/blocked_users" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">🚫 Blocked Users</a>
+        <hr>
+        <a href="/home" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">🏠 Home</a>
+        <a href="/logout" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">🔒 Logout</a>
+        <a href="/delete_account" style="display: block; padding: 5px 10px; text-decoration: none; color: red;">🗑️ Delete Account</a>
+    </div>
+</div>
 </html>

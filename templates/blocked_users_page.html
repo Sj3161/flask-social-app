@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Blocked Users</title>
+    <style>
+        body { font-family: Arial; padding: 30px; background: #eef1f5; text-align: center; }
+        .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: inline-block; }
+        .btn { text-decoration: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; color: white; margin: 5px; display: inline-block; }
+        .btn.blue { background-color: #007bff; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🚫 Blocked Users</h2>
+    {% if blocked_usernames %}
+    <ul style="list-style: none; padding-left: 0;">
+        {% for uname in blocked_usernames %}
+        <li style="margin: 10px 0;">
+            <strong>@{{ uname }}</strong><br>
+            <a href="{{ url_for('unblock_user', username=uname) }}" class="btn blue">Unblock</a>
+        </li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p>No users blocked.</p>
+    {% endif %}
+</div>
+</body>
+</html>

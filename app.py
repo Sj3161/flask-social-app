@@ -69,6 +69,12 @@ class Notification(db.Model):
     timestamp = db.Column(db.DateTime, default=db.func.now())
     type = db.Column(db.String(50), default='general')  # Add this line
 
+class BlockedUser(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    blocker_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    blocked_user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+
+
 
 
 with app.app_context():
@@ -108,6 +114,25 @@ def send_notification(user_id, message, notif_type='general'):
     db.session.add(notification)
     db.session.commit()
 
+def get_confirmed_friends(user_id):
+    friend_links = Friend.query.filter_by(user_id=user_id).all()
+    friend_ids = [f.friend_id for f in friend_links]
+    return User.query.filter(User.id.in_(friend_ids)).all()
+
+def get_incoming_requests(user_id):
+    return FriendRequest.query.filter_by(receiver_id=user_id, status="pending").all()
+
+def get_sent_requests(user_id):
+    return FriendRequest.query.filter_by(sender_id=user_id, status="pending").all()
+
+def get_all_users():
+    users = User.query.all()
+    return {user.id: user for user in users}
+
+def get_blocked_usernames(user_id):
+    blocked = BlockedUser.query.filter_by(blocker_id=user_id).all()
+    blocked_ids = [b.blocked_user_id for b in blocked]
+    return [u.username for u in User.query.filter(User.id.in_(blocked_ids)).all()]
 
 
 @app.route('/')
@@ -432,6 +457,34 @@ def mark_notifications_seen():
     Notification.query.filter_by(user_id=user_id, seen=False).update({"seen": True})
     db.session.commit()
     return '', 204
+
+@app.route('/friends')
+def friends_page():
+    user_id = session.get('user_id')
+    confirmed_friends = get_confirmed_friends(user_id)
+    return render_template('friends_page.html', confirmed_friends=confirmed_friends)
+
+
+@app.route('/friend_requests')
+def incoming_requests_page():
+    user_id = session.get('user_id')
+    friend_requests = get_incoming_requests(user_id)
+    users = get_all_users()
+    return render_template('incoming_requests_page.html', friend_requests=friend_requests, users=users)
+
+@app.route('/sent_requests')
+def sent_requests_page():
+    user_id = session.get('user_id')
+    sent_requests = get_sent_requests(user_id)
+    sent_users = get_all_users()
+    return render_template('sent_requests_page.html', sent_requests=sent_requests, sent_users=sent_users)
+
+@app.route('/blocked_users')
+def blocked_users_page():
+    user_id = session.get('user_id')
+    blocked_usernames = get_blocked_usernames(user_id)
+    return render_template('blocked_users_page.html', blocked_usernames=blocked_usernames)
+
 
 with app.app_context():
     with db.engine.connect() as conn:

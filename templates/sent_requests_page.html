@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Sent Friend Requests</title>
+  <style>
+    body { font-family: Arial; padding: 30px; background: #eef1f5; text-align: center; }
+    .container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: inline-block; }
+    .btn { text-decoration: none; padding: 6px 12px; border-radius: 5px; font-weight: bold; color: white; margin: 5px; display: inline-block; }
+    .btn.red { background-color: #dc3545; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h2>📤 Sent Friend Requests</h2>
+  {% if sent_requests %}
+  <ul style="list-style: none; padding-left: 0;">
+    {% for req in sent_requests %}
+    {% set receiver = sent_users[req.receiver_id] %}
+    <li style="margin: 10px 0;">
+      Sent to: <strong>@{{ receiver.username }}</strong><br>
+      <a href="{{ url_for('cancel_request', request_id=req.id) }}" class="btn red">❌ Cancel</a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p>No pending friend requests sent.</p>
+  {% endif %}
+</div>
+</body>
+</html>
