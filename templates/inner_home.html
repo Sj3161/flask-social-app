@@ -1,183 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <script>
-        window.onload = function () {
-          if (!window.location.search.includes("lat=")) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-              const lat = position.coords.latitude;
-              const lon = position.coords.longitude;
-              const currentUrl = new URL(window.location.href);
-              currentUrl.searchParams.set("lat", lat);
-              currentUrl.searchParams.set("lon", lon);
-              window.location.href = currentUrl.toString();
-            });
-          }
-        };
-    </script>
-
     <meta charset="UTF-8">
     <title>Inner Home</title>
     <style>
         body {
-          font-family: Arial, sans-serif;
-          background-color: #eef1f5;
-          padding: 40px;
-          text-align: center;
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #333;
+            transition: background-color 0.4s ease, color 0.4s ease;
+        }
+        body.dark-mode {
+            background: linear-gradient(120deg, #2c2c54 0%, #706fd3 100%);
+            color: #f1f1f1;
         }
         .container {
-          background: white;
-          display: inline-block;
-          padding: 40px;
-          border-radius: 10px;
-          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-          width: 80%;
+            background: white;
+            width: 90%;
+            max-width: 1000px;
+            border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+            padding: 40px;
+            margin: 30px 0;
+            transition: background-color 0.4s ease, color 0.4s ease;
         }
-        textarea, select {
-          width: 100%;
-          padding: 10px;
-          font-size: 1rem;
-          margin-top: 10px;
-          border-radius: 5px;
-          border: 1px solid #ccc;
+        .dark-mode .container {
+            background: #1e1e2f;
+            color: #f1f1f1;
         }
-        button {
-          margin-top: 10px;
-          padding: 10px 20px;
-          background-color: #007bff;
-          border: none;
-          color: white;
-          font-size: 1rem;
-          border-radius: 5px;
-          cursor: pointer;
+        .toggle-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 30px;
+            background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 999;
         }
-        button:hover {
-          background-color: #0056b3;
-        }
-        .post {
-          background-color: #f8f9fa;
-          padding: 15px;
-          margin-top: 20px;
-          border-left: 5px solid #007bff;
-          border-radius: 5px;
-          text-align: left;
-          position: relative;
-        }
-        .post small {
-          display: block;
-          margin-top: 5px;
-          font-size: 0.8rem;
-          color: #888;
+        .toggle-btn:hover {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            transform: scale(1.05);
         }
         .nav-links {
-          margin-top: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin: 20px 0;
         }
         .nav-links a {
-          margin: 5px;
-          text-decoration: none;
-          color: white;
-          background-color: #007bff;
-          padding: 10px 20px;
-          border-radius: 5px;
+            text-decoration: none;
+            color: white;
+            background-color: #f5576c;
+            padding: 10px 20px;
+            border-radius: 30px;
+            transition: background 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         .nav-links a:hover {
-          background-color: #0056b3;
+            background-color: #e64a5c;
         }
-
-        .btn {
-          text-decoration: none;
-          padding: 6px 12px;
-          border-radius: 5px;
-          font-weight: bold;
-          color: white;
-          margin: 5px;
-          display: inline-block;
+        .nav-links a.delete-account {
+            background-color: red;
         }
-        .btn.green { background-color: #28a745; }
-        .btn.red { background-color: #dc3545; }
-        .btn.blue { background-color: #007bff; }
-
+        .nav-links a.delete-account:hover {
+            background-color: darkred;
+        }
+        textarea, select {
+            width: 100%;
+            padding: 12px;
+            font-size: 1rem;
+            margin-top: 10px;
+            border-radius: 10px;
+            border: 1px solid #ddd;
+            transition: border-color 0.3s ease;
+        }
+        textarea:focus, select:focus {
+            border-color: #f093fb;
+            outline: none;
+        }
+        button {
+            background: linear-gradient(120deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 30px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.3s ease, transform 0.2s ease;
+        }
+        button:hover {
+            background: linear-gradient(120deg, #f5576c 0%, #f093fb 100%);
+            transform: translateY(-2px);
+        }
+        .form-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .post {
+            background: #fff;
+            border-left: 5px solid #f093fb;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .dark-mode .post {
+            background: #2e2e3f;
+        }
+        .post strong {
+            font-weight: bold;
+            color: #f5576c;
+        }
+        .post small {
+            display: inline-block;
+            margin-top: 8px;
+            font-size: 0.85rem;
+            color: #666;
+        }
         .options-button {
-          background-color: #ccc;
-          border: none;
-          border-radius: 50%;
-          width: 28px;
-          height: 28px;
-          cursor: pointer;
-          font-size: 16px;
-          float: right;
+            background: transparent;
+            border: none;
+            font-size: 1.2rem;
+            color: #666;
+            cursor: pointer;
+            float: right;
         }
         .options-menu {
-          display: none;
-          position: absolute;
-          top: 40px;
-          right: 10px;
-          background-color: white;
-          border: 1px solid #ccc;
-          border-radius: 5px;
-          box-shadow: 0px 2px 8px rgba(0, 0, 0, 0.1);
-          z-index: 100;
+            display: none;
+            position: absolute;
+            top: 35px;
+            right: 10px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .dark-mode .options-menu {
+            background: #2e2e3f;
+            color: #f1f1f1;
         }
         .options-menu a {
-          display: block;
-          padding: 8px 12px;
-          text-decoration: none;
-          color: #333;
+            padding: 10px 15px;
+            display: block;
+            text-decoration: none;
+            color: #333;
+            border-bottom: 1px solid #eee;
         }
         .options-menu a:hover {
-          background-color: #f2f2f2;
+            background-color: #f9f9f9;
+        }
+        .notification-box {
+            background: #fff;
+            border: 2px dashed #f093fb;
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: left;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .dark-mode .notification-box {
+            background: #2e2e3f;
+        }
+        #toast {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
+            z-index: 9999;
         }
     </style>
 
     <script>
-        function toggleFriendList() {
-          const visibility = document.getElementById('visibility').value;
-          const friendDiv = document.getElementById('friend-list');
-          friendDiv.style.display = visibility === 'private' ? 'block' : 'none';
-        }
-
-        function toggleMenu(button) {
-          const menu = button.nextElementSibling;
-          document.querySelectorAll('.options-menu').forEach(m => {
-            if (m !== menu) m.style.display = 'none';
-          });
-          menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-        }
-
-        document.addEventListener('click', function(e) {
-          if (!e.target.classList.contains('options-button')) {
-            document.querySelectorAll('.options-menu').forEach(m => m.style.display = 'none');
-          }
-        });
+        window.onload = function () {
+            if (!window.location.search.includes("lat=")) {
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    const lat = position.coords.latitude;
+                    const lon = position.coords.longitude;
+                    const currentUrl = new URL(window.location.href);
+                    currentUrl.searchParams.set("lat", lat);
+                    currentUrl.searchParams.set("lon", lon);
+                    window.location.href = currentUrl.toString();
+                });
+            }
+        };
     </script>
 </head>
 <body>
 
+<!-- 🌙 Toggle Dark Mode Button -->
+<button class="toggle-btn" onclick="toggleDarkMode()">
+    <span id="theme-icon">🌙</span> Toggle Dark Mode
+</button>
+
 <div class="container">
     <h1>Welcome, {{ username }} 👋</h1>
 
-    <!-- 🔔 Notifications -->
-    <div class="notification-box" style="background: #fff3cd; border: 1px solid #ffeeba; padding: 10px; border-radius: 8px; margin-bottom: 20px; text-align: left;">
+    <div class="nav-links">
+        <a href="/friends">👥 Your Friends</a>
+        <a href="/friend_requests">📥 Incoming Requests</a>
+        <a href="/sent_requests">📤 Sent Requests</a>
+        <a href="/blocked_users">🚫 Blocked Users</a>
+        <a href="/home">🏠 Home</a>
+        <a href="/logout">🔒 Logout</a>
+        <a href="/delete_account" class="delete-account">🗑️ Delete Account</a>
+    </div>
+
+    <div class="notification-box">
         <strong>🔔 Notifications <span id="notifCount">(0)</span></strong>
         <div id="notifBox" style="margin-top: 10px; max-height: 150px; overflow-y: auto;"></div>
     </div>
 
-
-    <!-- Post Form -->
     <form method="POST" action="{{ url_for('post_message') }}">
         <textarea name="content" placeholder="What's on your mind?" required></textarea><br>
-
-        <label>
-            <input type="checkbox" name="is_anonymous" value="true">
-            Post as Anonymous 🤐
-        </label><br>
-
+        <div class="form-group">
+            <input type="checkbox" name="is_anonymous" value="true" id="is_anonymous">
+            <label for="is_anonymous">Post as Anonymous 🤐</label>
+        </div>
         <label for="visibility">Visibility:</label>
         <select name="visibility" id="visibility" onchange="toggleFriendList()" required>
             <option value="public">Public</option>
             <option value="private">Private</option>
         </select><br>
-
         <label for="tag">Tag:</label>
         <select name="tag" id="tag" required>
             <option value="general">General</option>
@@ -185,8 +251,6 @@
             <option value="event">📅 Event</option>
             <option value="info">ℹ️ Info</option>
         </select><br>
-
-
         <div id="friend-list" style="display: none;">
             <label>Select friends to share this post with:</label><br>
             {% for friend in confirmed_friends %}
@@ -195,79 +259,66 @@
             </div>
             {% endfor %}
         </div>
-
-
         <button type="submit">Post</button>
     </form>
 
-    <!-- Display Posts -->
-    <div class="posts" id="posts-container">
-        {% if posts and posts|length > 0 %}
-        <pre style="text-align: left; background: #f0f0f0; padding: 10px; border-radius: 6px;">
+    {% if posts and posts|length > 0 %}
+    <pre style="text-align: left; background: #f0f0f0; padding: 10px; border-radius: 6px;">
     {{ posts[0] }}
-  </pre>
-        {% else %}
-        <p>No posts yet.</p>
-        {% endif %}
+    </pre>
+    {% endif %}
 
-        <h2>📬 Recent Posts</h2>
-
-        {% if posts %}
-        <pre style="text-align: left; background: #f0f0f0; padding: 10px; border-radius: 6px;">
-        {{ posts[0] }}
-      </pre>
-        {% else %}
-        <p>No posts yet.</p>
-        {% endif %}
-
-
-        {% for post in posts %}
-        <div class="post" data-user="{{ post.username }}">
-            <div>
-                <strong>
-                    {% if post.is_anonymous %}
-                    🕵️ Anonymous
-                    {% else %}
-                    @{{ post.username }}
-                    {% endif %}
-                </strong>
-
-                <button class="options-button" onclick="toggleMenu(this)">+</button>
-                <div class="options-menu">
-                    {% set post_user = users.values() | selectattr('username', 'equalto', post.username) | list | first %}
-                    {% if post_user and post_user.id != session['user_id'] %}
-                    {% set is_friend = confirmed_friends|selectattr('id', 'equalto', post_user.id)|list %}
-                    {% set existing_request = sent_requests|selectattr('receiver_id', 'equalto', post_user.id)|list %}
-                    {% if not is_friend and not existing_request %}
-                    <a href="{{ url_for('send_request', receiver_id=post_user.id) }}">✅ Send Friend Request</a>
-                    {% elif existing_request %}
-                    <span style="padding: 10px 12px; display: block; color: gray;">Request Sent</span>
-                    {% endif %}
-                    <a href="{{ url_for('block_user', username=post.username) }}">🚫 Block User</a>
-                    {% endif %}
-                </div>
+    <h2>📬 Recent Posts</h2>
+    {% for post in posts %}
+    <div class="post" data-user="{{ post.username }}">
+        <div>
+            <strong>{% if post.is_anonymous %}🕵️ Anonymous{% else %}@{{ post.username }}{% endif %}</strong>
+            <button class="options-button" onclick="toggleMenu(this)">⋮</button>
+            <div class="options-menu">
+                {% set post_user = users.values() | selectattr('username', 'equalto', post.username) | list | first %}
+                {% if post_user and post_user.id != session['user_id'] %}
+                {% set is_friend = confirmed_friends|selectattr('id', 'equalto', post_user.id)|list %}
+                {% set existing_request = sent_requests|selectattr('receiver_id', 'equalto', post_user.id)|list %}
+                {% if not is_friend and not existing_request %}
+                <a href="{{ url_for('send_request', receiver_id=post_user.id) }}">✅ Send Friend Request</a>
+                {% elif existing_request %}
+                <span style="padding: 10px 12px; display: block; color: gray;">Request Sent</span>
+                {% endif %}
+                <a href="{{ url_for('block_user', username=post.username) }}">🚫 Block User</a>
+                {% endif %}
             </div>
-            <div>{{ post.content }}</div>
-            <small>Visibility: {{ post.visibility }}{% if post.tag %} | Tag: {{ post.tag }}{% endif %}</small>
         </div>
-        {% endfor %}
+        <div>{{ post.content }}</div>
+        <small>Visibility: {{ post.visibility }}{% if post.tag %} | Tag: {{ post.tag }}{% endif %}</small>
     </div>
+    {% else %}
+    <p>No posts yet.</p>
+    {% endfor %}
 </div>
 
-<div id="toast" style="
-    display: none;
-    position: fixed;
-    bottom: 20px;
-    right: 20px;
-    background: #333;
-    color: white;
-    padding: 12px 20px;
-    border-radius: 8px;
-    box-shadow: 0px 2px 6px rgba(0,0,0,0.3);
-    z-index: 9999;
-">🔔 <span id="toast-message"></span></div>
+<div id="toast">🔔 <span id="toast-message"></span></div>
 
 <script>
+    function toggleFriendList() {
+        const visibility = document.getElementById('visibility').value;
+        const friendDiv = document.getElementById('friend-list');
+        friendDiv.style.display = visibility === 'private' ? 'block' : 'none';
+    }
+
+    function toggleMenu(button) {
+        const menu = button.nextElementSibling;
+        document.querySelectorAll('.options-menu').forEach(m => {
+            if (m !== menu) m.style.display = 'none';
+        });
+        menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+    }
+
+    document.addEventListener('click', function(e) {
+        if (!e.target.classList.contains('options-button')) {
+            document.querySelectorAll('.options-menu').forEach(m => m.style.display = 'none');
+        }
+    });
+
     function showToast(msg) {
         const toast = document.getElementById("toast");
         document.getElementById("toast-message").textContent = msg;
@@ -283,7 +334,6 @@
                 const count = document.getElementById("notifCount");
                 box.innerHTML = '';
                 count.textContent = `(${data.length})`;
-
                 if (data.length === 0) {
                     box.innerHTML = "<i>No new notifications</i>";
                 } else {
@@ -292,48 +342,43 @@
                         div.style.marginBottom = "5px";
                         div.textContent = `${n.timestamp}: ${n.message}`;
                         box.appendChild(div);
-                        showToast(n.message);  // ✅ toast only, no sound
+                        showToast(n.message);
                     });
-
                     fetch('/notifications/seen', { method: 'POST' });
                 }
             });
     }
-
     fetchNotifications();
     setInterval(fetchNotifications, 15000);
-</script>
 
-<script>
-    function toggleMenu() {
-        const menu = document.getElementById("moreMenu");
-        menu.style.display = (menu.style.display === "block") ? "none" : "block";
+  // 🌙 Dynamic Dark Mode Toggle with Icon Switching
+function toggleDarkMode() {
+    const body = document.body;
+    const icon = document.getElementById("theme-icon");
+
+    body.classList.toggle("dark-mode");
+
+    if (body.classList.contains("dark-mode")) {
+        icon.textContent = "🌞";  // Light mode icon
+    } else {
+        icon.textContent = "🌙";  // Dark mode icon
     }
 
-    document.addEventListener("click", function(event) {
-        const menu = document.getElementById("moreMenu");
-        const menuButton = event.target.closest("div[onclick='toggleMenu()']");
-        if (!menu.contains(event.target) && !menuButton) {
-            menu.style.display = "none";
-        }
-    });
+    localStorage.setItem("dark-mode", body.classList.contains("dark-mode"));
+}
+
+window.addEventListener("DOMContentLoaded", () => {
+    const body = document.body;
+    const icon = document.getElementById("theme-icon");
+
+    if (localStorage.getItem("dark-mode") === "true") {
+        body.classList.add("dark-mode");
+        icon.textContent = "🌞";  // Set to light mode icon
+    } else {
+        icon.textContent = "🌙";  // Set to dark mode icon
+    }
+});
+
 </script>
-
-
 </body>
-<!-- 3-Dot Dropdown Menu -->
-<div style="position: absolute; top: 20px; right: 30px;">
-    <div style="cursor: pointer; font-size: 24px;" onclick="toggleMenu()">⋮</div>
-
-    <div id="moreMenu" style="display: none; position: absolute; background-color: white; border: 1px solid #ccc; border-radius: 5px; padding: 10px; z-index: 1000; box-shadow: 0 2px 8px rgba(0,0,0,0.2);">
-        <a href="/friends" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">👥 Your Friends</a>
-        <a href="/friend_requests" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">📥 Incoming Requests</a>
-        <a href="/sent_requests" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">📤 Sent Requests</a>
-        <a href="/blocked_users" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">🚫 Blocked Users</a>
-        <hr>
-        <a href="/home" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">🏠 Home</a>
-        <a href="/logout" style="display: block; padding: 5px 10px; text-decoration: none; color: black;">🔒 Logout</a>
-        <a href="/delete_account" style="display: block; padding: 5px 10px; text-decoration: none; color: red;">🗑️ Delete Account</a>
-    </div>
-</div>
 </html>
